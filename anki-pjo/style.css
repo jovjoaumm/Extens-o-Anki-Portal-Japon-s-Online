@@ -1,10 +1,9 @@
 /* ── Wrapper dos botões ─────────────────────────────────────────────────── */
 .pjo-anki-wrap {
   display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
+  flex-direction: row;
+  align-items: stretch;
   margin-top: 10px;
-  gap: 6px;
 }
 
 /* ── Grupo principal (botão + chevron lado a lado) ─────────────────────── */
@@ -95,6 +94,7 @@
   flex-direction: column;
   gap: 6px;
   padding: 8px 10px;
+  margin-top: 6px;
   background: #fff;
   border: 1px solid #d0d0d0;
   border-radius: 8px;

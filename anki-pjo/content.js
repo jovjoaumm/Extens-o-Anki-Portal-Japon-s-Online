@@ -62,7 +62,7 @@ const SVG = {
 
 // ── Deck picker ──────────────────────────────────────────────────────────────
 function showDeckPicker(wrap, onSelect) {
-  const existing = wrap.querySelector(".pjo-deck-picker");
+  const existing = wrap.parentElement.querySelector(".pjo-deck-picker");
   if (existing) { existing.remove(); return; }
 
   const picker = document.createElement("div");
@@ -81,7 +81,7 @@ function showDeckPicker(wrap, onSelect) {
   const sendBtn   = picker.querySelector(".pjo-btn-send");
   const cancelBtn = picker.querySelector(".pjo-btn-cancel");
 
-  wrap.appendChild(picker);
+  wrap.insertAdjacentElement("afterend", picker);
 
   fetchDecks().then(decks => {
     const lastDeck = localStorage.getItem(LAST_DECK_KEY);
