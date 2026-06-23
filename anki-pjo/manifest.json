@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "PJO → Anki",
+  "version": "1.0",
+  "description": "Envia cards do Portal Japonês Online direto para o Anki.",
+  "permissions": [],
+  "host_permissions": [
+    "http://localhost:8765/"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://portal.programajaponesonline.com.br/*"],
+      "js": ["content.js"],
+      "css": ["style.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
