@@ -1,40 +1,68 @@
-/* ── Botão Anki ─────────────────────────────────────────────────────────── */
+/* ── Wrapper dos botões ─────────────────────────────────────────────────── */
+.pjo-anki-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  margin-top: 10px;
+  gap: 6px;
+}
+
+/* ── Grupo principal (botão + chevron lado a lado) ─────────────────────── */
+.pjo-anki-btn,
+.pjo-anki-chevron {
+  border: none;
+  font-family: sans-serif;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, filter 0.2s;
+  color: #fff;
+  background: #1a73e8;
+}
+
 .pjo-anki-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 10px;
-  padding: 5px 12px;
-  border: none;
-  border-radius: 6px;
+  padding: 5px 10px 5px 12px;
+  border-radius: 6px 0 0 6px;
   font-size: 12px;
-  font-weight: 600;
-  font-family: sans-serif;
-  cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
-  background: #1a73e8;
-  color: #fff;
+  border-right: 1px solid rgba(255,255,255,0.25);
 }
 
-.pjo-anki-btn svg {
+.pjo-anki-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 7px;
+  border-radius: 0 6px 6px 0;
+  font-size: 12px;
+}
+
+.pjo-anki-btn svg,
+.pjo-anki-chevron svg {
   width: 14px;
   height: 14px;
   flex-shrink: 0;
 }
 
-.pjo-anki-btn:hover {
-  filter: brightness(1.1);
-  transform: translateY(-1px);
+.pjo-anki-btn:hover,
+.pjo-anki-chevron:hover {
+  filter: brightness(1.12);
 }
 
-.pjo-anki-btn:active {
-  transform: translateY(0);
+.pjo-anki-btn:active,
+.pjo-anki-chevron:active {
+  filter: brightness(0.95);
 }
 
-/* ── Estados ────────────────────────────────────────────────────────────── */
+/* ── Estados do botão principal ────────────────────────────────────────── */
 .pjo-anki-btn[data-state="loading"] {
   background: #888;
   cursor: wait;
+  pointer-events: none;
+}
+.pjo-anki-btn[data-state="loading"] + .pjo-anki-chevron {
+  background: #888;
   pointer-events: none;
 }
 
@@ -42,8 +70,14 @@
   background: #1e8c45;
   pointer-events: none;
 }
+.pjo-anki-btn[data-state="success"] + .pjo-anki-chevron {
+  background: #1e8c45;
+}
 
 .pjo-anki-btn[data-state="error"] {
+  background: #c0392b;
+}
+.pjo-anki-btn[data-state="error"] + .pjo-anki-chevron {
   background: #c0392b;
 }
 
@@ -60,13 +94,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 8px;
   padding: 8px 10px;
   background: #fff;
   border: 1px solid #d0d0d0;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   font-family: sans-serif;
+  min-width: 220px;
 }
 
 .pjo-deck-select {

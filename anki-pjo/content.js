@@ -31,20 +31,39 @@ async function addToAnki(front, back, deckName) {
   });
 }
 
+// ── SVGs ─────────────────────────────────────────────────────────────────────
+const SVG = {
+  layers: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+    <path d="M2 17l10 5 10-5"/>
+    <path d="M2 12l10 5 10-5"/>
+  </svg>`,
+  chevron: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 9 12 15 18 9"/>
+  </svg>`,
+  check: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>`,
+  spin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+      class="pjo-spin">
+    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+  </svg>`,
+  error: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <line x1="12" y1="8" x2="12" y2="12"/>
+    <line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>`
+};
+
 // ── Deck picker ──────────────────────────────────────────────────────────────
-function showDeckPicker(btn, cardEl) {
-  // Fecha picker existente no mesmo card
-  const existing = cardEl.querySelector(".pjo-deck-picker");
+function showDeckPicker(wrap, onSelect) {
+  const existing = wrap.querySelector(".pjo-deck-picker");
   if (existing) { existing.remove(); return; }
-
-  const front = cardEl.querySelector(".card-front")?.innerText?.trim();
-  const back  = cardEl.querySelector(".card-back")?.innerText?.trim();
-
-  if (!front || !back) {
-    setButtonState(btn, "error", "Campo vazio");
-    setTimeout(() => setButtonState(btn, "idle"), 3000);
-    return;
-  }
 
   const picker = document.createElement("div");
   picker.className = "pjo-deck-picker";
@@ -58,13 +77,12 @@ function showDeckPicker(btn, cardEl) {
     </div>
   `;
 
-  const select   = picker.querySelector(".pjo-deck-select");
-  const sendBtn  = picker.querySelector(".pjo-btn-send");
+  const select    = picker.querySelector(".pjo-deck-select");
+  const sendBtn   = picker.querySelector(".pjo-btn-send");
   const cancelBtn = picker.querySelector(".pjo-btn-cancel");
 
-  cardEl.appendChild(picker);
+  wrap.appendChild(picker);
 
-  // Carrega decks
   fetchDecks().then(decks => {
     const lastDeck = localStorage.getItem(LAST_DECK_KEY);
     select.innerHTML = decks.map(d =>
@@ -77,81 +95,111 @@ function showDeckPicker(btn, cardEl) {
   });
 
   cancelBtn.addEventListener("click", () => picker.remove());
-
-  sendBtn.addEventListener("click", async () => {
-    const deckName = select.value;
+  sendBtn.addEventListener("click", () => {
+    const deck = select.value;
     picker.remove();
-    setButtonState(btn, "loading", "Enviando…");
-    try {
-      await addToAnki(front, back, deckName);
-      localStorage.setItem(LAST_DECK_KEY, deckName);
-      setButtonState(btn, "success", "Adicionado!");
-      setTimeout(() => setButtonState(btn, "idle"), 3000);
-    } catch (err) {
-      const msg = err.message.includes("duplicate") ? "Duplicado" :
-                  err.message.includes("Failed to fetch") ? "Anki fechado?" : "Erro";
-      setButtonState(btn, "error", msg);
-      setTimeout(() => setButtonState(btn, "idle"), 4000);
-    }
+    onSelect(deck);
   });
 }
 
-// ── Botão ────────────────────────────────────────────────────────────────────
+// ── Cria o conjunto de botões ─────────────────────────────────────────────────
 function createAnkiButton(cardEl) {
-  const btn = document.createElement("button");
-  btn.className = "pjo-anki-btn";
-  btn.title = "Enviar ao Anki";
-  setButtonState(btn, "idle");
+  const wrap = document.createElement("div");
+  wrap.className = "pjo-anki-wrap";
 
-  btn.addEventListener("click", (e) => {
+  const mainBtn    = document.createElement("button");
+  mainBtn.className = "pjo-anki-btn";
+
+  const chevronBtn = document.createElement("button");
+  chevronBtn.className = "pjo-anki-chevron";
+  chevronBtn.title = "Trocar deck";
+  chevronBtn.innerHTML = SVG.chevron;
+
+  wrap.appendChild(mainBtn);
+  wrap.appendChild(chevronBtn);
+
+  const savedDeck = localStorage.getItem(LAST_DECK_KEY);
+  if (savedDeck) {
+    renderReady(mainBtn, savedDeck);
+  } else {
+    renderFirstUse(mainBtn);
+  }
+
+  // Clique no botão principal
+  mainBtn.addEventListener("click", async (e) => {
     e.stopPropagation();
-    showDeckPicker(btn, cardEl);
+
+    const currentDeck = localStorage.getItem(LAST_DECK_KEY);
+
+    // Sem deck salvo: abre picker
+    if (!currentDeck) {
+      showDeckPicker(wrap, (deck) => {
+        localStorage.setItem(LAST_DECK_KEY, deck);
+        renderReady(mainBtn, deck);
+        sendCard(mainBtn, cardEl, deck);
+      });
+      return;
+    }
+
+    sendCard(mainBtn, cardEl, currentDeck);
   });
 
-  return btn;
+  // Clique no chevron: abre picker para trocar deck
+  chevronBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    showDeckPicker(wrap, (deck) => {
+      localStorage.setItem(LAST_DECK_KEY, deck);
+      renderReady(mainBtn, deck);
+    });
+  });
+
+  return wrap;
 }
 
-function setButtonState(btn, state, label) {
-  btn.dataset.state = state;
-
-  const labels = {
-    idle:    "Anki",
-    loading: label || "Enviando…",
-    success: label || "Adicionado!",
-    error:   label || "Erro"
-  };
-
-  const icons = {
-    idle: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-               stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-             <path d="M12 2L2 7l10 5 10-5-10-5z"/>
-             <path d="M2 17l10 5 10-5"/>
-             <path d="M2 12l10 5 10-5"/>
-           </svg>`,
-    loading: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
-                   class="pjo-spin">
-               <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-             </svg>`,
-    success: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                   stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-               <polyline points="20 6 9 17 4 12"/>
-             </svg>`,
-    error: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-             <circle cx="12" cy="12" r="10"/>
-             <line x1="12" y1="8" x2="12" y2="12"/>
-             <line x1="12" y1="16" x2="12.01" y2="16"/>
-           </svg>`
-  };
-
-  btn.innerHTML = `${icons[state]}<span>${labels[state]}</span>`;
+function renderFirstUse(btn) {
+  btn.dataset.state = "idle";
+  btn.innerHTML = `${SVG.layers}<span>Anki</span>`;
+  btn.title = "Clique para escolher um deck";
 }
 
-// ── Observa cards abertos ────────────────────────────────────────────────────
+function renderReady(btn, deckName) {
+  btn.dataset.state = "idle";
+  btn.innerHTML = `${SVG.layers}<span>${deckName}</span>`;
+  btn.title = `Enviar para "${deckName}"`;
+}
+
+async function sendCard(btn, cardEl, deckName) {
+  const front = cardEl.querySelector(".card-front")?.innerText?.trim();
+  const back  = cardEl.querySelector(".card-back")?.innerText?.trim();
+
+  if (!front || !back) {
+    btn.dataset.state = "error";
+    btn.innerHTML = `${SVG.error}<span>Campo vazio</span>`;
+    setTimeout(() => renderReady(btn, deckName), 3000);
+    return;
+  }
+
+  btn.dataset.state = "loading";
+  btn.innerHTML = `${SVG.spin}<span>Enviando…</span>`;
+
+  try {
+    await addToAnki(front, back, deckName);
+    btn.dataset.state = "success";
+    btn.innerHTML = `${SVG.check}<span>Adicionado!</span>`;
+    setTimeout(() => renderReady(btn, deckName), 3000);
+  } catch (err) {
+    const msg = err.message.includes("duplicate") ? "Duplicado" :
+                err.message.includes("Failed to fetch") ? "Anki fechado?" : "Erro";
+    btn.dataset.state = "error";
+    btn.innerHTML = `${SVG.error}<span>${msg}</span>`;
+    setTimeout(() => renderReady(btn, deckName), 4000);
+  }
+}
+
+// ── Injeta botões nos cards ──────────────────────────────────────────────────
 function injectButtons() {
   document.querySelectorAll(".card").forEach((card) => {
-    if (card.style.display !== "none" && !card.querySelector(".pjo-anki-btn")) {
+    if (card.style.display !== "none" && !card.querySelector(".pjo-anki-wrap")) {
       card.appendChild(createAnkiButton(card));
     }
   });
