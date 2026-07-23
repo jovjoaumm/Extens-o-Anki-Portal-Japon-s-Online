@@ -19,16 +19,21 @@ async function fetchDecks() {
   return decks.sort();
 }
 
-async function addToAnki(front, back, deckName) {
-  return ankiRequest("addNote", {
-    note: {
-      deckName,
-      modelName: MODEL_NAME,
-      fields: { Front: front, Back: back },
-      options: { allowDuplicate: false },
-      tags: ["pjo"]
-    }
-  });
+async function addToAnki(front, back, deckName, audioUrl) {
+  const note = {
+    deckName,
+    modelName: MODEL_NAME,
+    fields: { Front: front, Back: back },
+    options: { allowDuplicate: false },
+    tags: ["pjo"]
+  };
+
+  if (audioUrl) {
+    const filename = decodeURIComponent(audioUrl.split("/").pop());
+    note.audio = [{ url: audioUrl, filename, fields: ["Back"] }];
+  }
+
+  return ankiRequest("addNote", { note });
 }
 
 // ── SVGs ─────────────────────────────────────────────────────────────────────
@@ -169,8 +174,9 @@ function renderReady(btn, deckName) {
 }
 
 async function sendCard(btn, cardEl, deckName) {
-  const front = cardEl.querySelector(".card-front")?.innerText?.trim();
-  const back  = cardEl.querySelector(".card-back")?.innerText?.trim();
+  const front    = cardEl.querySelector(".card-front")?.innerText?.trim();
+  const back     = cardEl.querySelector(".card-back")?.innerText?.trim();
+  const audioUrl = cardEl.closest(".sentence")?.querySelector("audio")?.src || null;
 
   if (!front || !back) {
     btn.dataset.state = "error";
@@ -183,7 +189,7 @@ async function sendCard(btn, cardEl, deckName) {
   btn.innerHTML = `${SVG.spin}<span>Enviando…</span>`;
 
   try {
-    await addToAnki(front, back, deckName);
+    await addToAnki(front, back, deckName, audioUrl);
     btn.dataset.state = "success";
     btn.innerHTML = `${SVG.check}<span>Adicionado!</span>`;
     setTimeout(() => renderReady(btn, deckName), 3000);
