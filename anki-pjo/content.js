@@ -19,6 +19,17 @@ async function fetchDecks() {
   return decks.sort();
 }
 
+async function fetchAudioBase64(url) {
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error(`Audio HTTP ${res.status}`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return btoa(bin);
+}
+
 async function addToAnki(front, back, deckName, audioUrl) {
   const note = {
     deckName,
@@ -29,8 +40,10 @@ async function addToAnki(front, back, deckName, audioUrl) {
   };
 
   if (audioUrl) {
-    const filename = decodeURIComponent(audioUrl.split("/").pop());
-    note.audio = [{ url: audioUrl, filename, fields: ["Back"] }];
+    const filename = decodeURIComponent(audioUrl.split("?")[0].split("/").pop());
+    // Baixa no navegador (com cookies/Referer do portal); o Anki sozinho recebe 403.
+    const data = await fetchAudioBase64(audioUrl);
+    note.audio = [{ data, filename, fields: ["Back"] }];
   }
 
   return ankiRequest("addNote", { note });
